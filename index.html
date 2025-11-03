@@ -1,0 +1,365 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>GreenPieces — Puzzle éco</title>
+<style>
+/* =================== THEME (clair, vert/sky) =================== */
+:root{
+  --bg-sky: #dff3f6;
+  --bg-hill:#cfead1;
+  --panel:  #e7f3ee;
+  --panel-2:#d8ece6;
+  --border: #b6d9cd;
+  --ink:    #23423a;
+  --muted:  #466f63;
+  --green1: #4fb46b;
+  --green2: #87cf78;
+  --ring:   rgba(79,180,107,.35);
+  --radius: 16px;
+  --gap:    14px;
+  --grid:   5; /* 5x5 interne */
+}
+
+*{box-sizing:border-box}
+html,body{height:100%}
+body{
+  margin:0;
+  font-family: system-ui,-apple-system,Segoe UI,Roboto,Arial,"Noto Sans";
+  color:var(--ink);
+  background:
+    radial-gradient(1200px 700px at 25% -10%, var(--bg-sky) 0%, #eaf7fa 45%, #f3fbf7 100%),
+    linear-gradient(180deg, #f5fcfa, var(--bg-hill) 120vh);
+}
+
+/* =================== LAYOUT =================== */
+.app{max-width:1200px;margin:0 auto;padding:18px 14px 28px}
+.topbar{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:10px}
+.brand{display:flex;align-items:center;gap:10px}
+.brand .logo{font-size:22px}
+.brand h1{margin:0;font-size:clamp(18px,2.2vw,24px);font-weight:800;letter-spacing:.2px}
+.controls{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+button{border:0;border-radius:12px;cursor:pointer;transition:transform .08s ease}
+button:active{transform:translateY(1px)}
+button.ghost{background:transparent;color:var(--muted);border:1px solid var(--border);padding:8px 12px}
+button.ghost:hover{border-color:#99c8b7}
+label.switch{display:inline-flex;gap:8px;align-items:center;background:#eef9f4;border:1px solid var(--border);padding:8px 12px;border-radius:12px;color:#2d544a}
+label.switch input{accent-color:var(--green1)}
+
+.stage{
+  display:grid; gap:var(--gap);
+  grid-template-columns: 1fr 1.4fr 0.9fr;   /* centre prioritaire */
+  align-items:start; min-height:70vh;
+}
+
+/* =================== PANELS =================== */
+.panel{
+  background:linear-gradient(180deg,var(--panel),var(--panel-2));
+  border:1px solid var(--border);border-radius:var(--radius);
+  padding:12px;display:flex;flex-direction:column;min-height:0;
+}
+.panel h2{margin:2px 0 10px 2px;font-size:clamp(14px,1.6vw,18px);color:#2e7f5a;font-weight:800}
+
+.grid{
+  position:relative;flex:1;border-radius:12px;border:1px dashed #b7dccf;
+  background: linear-gradient(180deg,#edf8f3,#e6f4ef);
+  overflow:hidden;min-height:220px;
+}
+.grid::before{
+  /* repères subtils */
+  content:"";position:absolute;inset:0;pointer-events:none;opacity:.2;
+  background:
+    linear-gradient(#bcded2 1px, transparent 1px) repeat-y,
+    linear-gradient(90deg,#bcded2 1px, transparent 1px) repeat-x;
+  background-size: calc(100% / var(--grid)) calc(100% / var(--grid));
+}
+
+/* Assemblage centré, sans espace entre carreaux */
+.center-box{display:flex;flex-direction:column;gap:var(--gap);align-items:center}
+.board-wrap{width:100%;display:grid;place-items:center}
+#board{
+  width:min(520px, 88%); aspect-ratio:3/4; max-height:60vh;
+  border:1px dashed #b7dccf;
+  background: #eaf6f0;     /* neutral */
+}
+#board::before{display:none}  /* pas de lignes sur la zone reconstituée */
+
+#pool{aspect-ratio:1/1}       /* carré lisible */
+.ref{
+  border-radius:12px;border:1px dashed #b7dccf;overflow:hidden;
+  background:#eef7f3 center/cover no-repeat;
+  background-image:url("image.png");
+  aspect-ratio:3/4;
+}
+
+/* =================== PIECES (clic) =================== */
+.piece{
+  position:absolute; overflow:hidden; cursor:pointer;
+  border-radius:10px;
+  transition: transform .2s cubic-bezier(.2,.8,.2,1), box-shadow .15s, filter .15s, border-radius .15s;
+  filter: drop-shadow(0 2px 2px rgba(0,0,0,.06)) drop-shadow(0 6px 10px rgba(0,0,0,.08));
+  user-select:none;
+  outline:2px solid rgba(0,0,0,0); /* pour l'état sélectionné */
+}
+.piece:hover{filter: drop-shadow(0 3px 3px rgba(0,0,0,.08)) drop-shadow(0 10px 16px rgba(0,0,0,.12))}
+.piece.selected{transform:scale(1.06);box-shadow:0 0 0 6px var(--ring);z-index:5}
+.piece__img{position:absolute;inset:0;background-size:500% 500%;background-repeat:no-repeat}
+.piece__num{
+  position:absolute;bottom:6px;right:6px;
+  font: 800 12px/1.2 ui-monospace,Consolas,monospace;
+  color:#163323;background:linear-gradient(180deg,#c9f2d6,#8fe0ad);
+  padding:4px 6px;border-radius:6px;opacity:0;transform:translateY(4px);
+  transition:opacity .2s, transform .2s;
+}
+.piece.show-num .piece__num{opacity:.95;transform:translateY(0)}
+
+/* Effet “sans espace” sur le board */
+.piece.in-board{
+  border-radius:0;            /* bords affleurants */
+  box-shadow:none; filter:none;
+  outline: none;
+}
+
+/* =================== WIN =================== */
+.win{position:fixed;inset:0;background:rgba(0,0,0,.25);display:grid;place-items:center;backdrop-filter:blur(2px)}
+.win.hidden{display:none}
+.win__card{
+  background:#ffffff;border:1px solid #cfead9;color:#1f3e35;border-radius:18px;padding:18px;
+  width:min(440px,92vw);text-align:center;box-shadow:0 10px 30px rgba(0,0,0,.15)
+}
+.win__title{font-weight:900;font-size:20px;margin:6px 0 14px}
+button.primary{
+  background:linear-gradient(180deg,var(--green1),#2c8b53);
+  color:#fff;font-weight:900;padding:10px 14px;border-radius:12px;border:0
+}
+
+/* =================== RESPONSIVE =================== */
+@media (max-width:1024px){
+  .stage{grid-template-columns:1fr}
+  #pool{aspect-ratio:auto;min-height:220px}
+}
+</style>
+</head>
+<body>
+  <div class="app">
+    <header class="topbar">
+      <div class="brand"><span class="logo">🌿</span><h1>GreenPieces</h1></div>
+      <div class="controls">
+        <label class="switch">
+          <input id="toggleNumbers" type="checkbox" />
+          Afficher les numéros (aide)
+        </label>
+        <button id="reshuffle" class="ghost" title="Recommencer">Recommencer</button>
+      </div>
+    </header>
+
+    <section class="stage">
+      <!-- Gauche : Pièces mélangées -->
+      <div class="panel">
+        <h2>Pièces mélangées</h2>
+        <div id="pool" class="grid" aria-label="Pièces mélangées"></div>
+      </div>
+
+      <!-- Centre : Assemblage (prioritaire & centré) -->
+      <div class="panel center-box">
+        <h2>Reconstituer le puzzle</h2>
+        <div class="board-wrap">
+          <div id="board" class="grid" aria-label="Zone de reconstruction"></div>
+        </div>
+      </div>
+
+      <!-- Droite : Référence -->
+      <div class="panel">
+        <h2>Image complète (référence)</h2>
+        <div id="reference" class="ref" aria-label="Image de référence"></div>
+      </div>
+    </section>
+
+    <!-- Victoire -->
+    <div id="win" class="win hidden" role="alert" aria-live="assertive">
+      <div class="win__card">
+        <p class="win__title">Bravo ! Tu as aidé la planète 🌱</p>
+        <button id="closeWin" class="primary">Continuer</button>
+      </div>
+    </div>
+  </div>
+
+<script>
+/* =================== GreenPieces — CLIC pour placer/échanger =================== */
+const IMAGE_URL = "image.png"; // même dossier
+const GRID = 5, PIECES = GRID*GRID;
+
+const poolEl = document.getElementById('pool');
+const boardEl = document.getElementById('board');
+const refEl = document.getElementById('reference');
+const toggleNumbers = document.getElementById('toggleNumbers');
+const reshuffleBtn = document.getElementById('reshuffle');
+const winEl = document.getElementById('win');
+const closeWin = document.getElementById('closeWin');
+
+let pieces = [];                          // {id,row,col,el,slotType,slotIndex}
+let poolSlots = Array(PIECES).fill(null);
+let boardSlots = Array(PIECES).fill(null);
+let selectedPieceId = null;
+let ro = null;
+
+/* Utils */
+const clamp = (v,min,max)=>Math.max(min,Math.min(max,v));
+function shuffle(a){ for(let i=a.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [a[i],a[j]]=[a[j],a[i]] } }
+function gridToXY(idx, container){
+  const r = container.getBoundingClientRect();
+  const cw = r.width / GRID, ch = r.height / GRID;
+  const row = Math.floor(idx/GRID), col = idx%GRID;
+  return { x: col*cw, y: row*ch, w:cw, h:ch, row, col };
+}
+
+/* Création / reset */
+function makePiece(id){
+  const row = Math.floor(id/GRID), col = id%GRID;
+  const el = document.createElement('div');
+  el.className = 'piece'; el.setAttribute('data-id',id);
+  el.setAttribute('role','button'); el.setAttribute('aria-label',`Pièce ${id+1}`);
+
+  const img = document.createElement('div'); img.className = 'piece__img';
+  img.style.backgroundImage = `url("${IMAGE_URL}")`;
+  img.style.backgroundSize = `${GRID*100}% ${GRID*100}%`;
+  img.style.backgroundPosition = `${(col/(GRID-1))*100}% ${(row/(GRID-1))*100}%`;
+
+  const num = document.createElement('div'); num.className = 'piece__num'; num.textContent = id+1;
+
+  el.appendChild(img); el.appendChild(num);
+  el.addEventListener('click', (e)=>{ e.stopPropagation(); onPieceClick(id); });
+  return { id, row, col, el, slotType:'pool', slotIndex:-1 };
+}
+
+function clearBoards(){
+  poolEl.innerHTML=''; boardEl.innerHTML='';
+  pieces=[]; poolSlots=Array(PIECES).fill(null); boardSlots=Array(PIECES).fill(null);
+  selectedPieceId=null;
+}
+
+function layoutAll(){
+  pieces.forEach(p=>{
+    const c = (p.slotType==='pool')?poolEl:boardEl;
+    const {x,y,w,h} = gridToXY(p.slotIndex,c);
+    // style “sans espace” quand sur board
+    p.el.classList.toggle('in-board', p.slotType==='board');
+    p.el.style.width = w+'px'; p.el.style.height = h+'px';
+    p.el.style.transform = `translate(${x}px, ${y}px)`;
+  });
+}
+
+function populate(){
+  clearBoards();
+  refEl.style.backgroundImage = `url("${IMAGE_URL}")`;
+  for(let i=0;i<PIECES;i++) pieces.push(makePiece(i));
+
+  const order = [...Array(PIECES).keys()]; shuffle(order);
+  order.forEach((slotIdx,i)=>{
+    const p = pieces[i]; p.slotType='pool'; p.slotIndex=slotIdx;
+    poolSlots[slotIdx]=p.id; poolEl.appendChild(p.el);
+  });
+
+  poolEl.addEventListener('click', onPoolClick);
+  boardEl.addEventListener('click', onBoardClick);
+
+  layoutAll();
+
+  if(ro) ro.disconnect();
+  ro = new ResizeObserver(layoutAll);
+  ro.observe(poolEl); ro.observe(boardEl);
+
+  // montrer les numéros si coché
+  const show = toggleNumbers.checked;
+  pieces.forEach(p=> p.el.classList.toggle('show-num', show));
+}
+
+/* Sélection & déplacements (clic) */
+function setSelected(id){
+  if(selectedPieceId!==null) pieces[selectedPieceId].el.classList.remove('selected');
+  selectedPieceId = id;
+  if(id!==null) pieces[id].el.classList.add('selected');
+}
+function onPieceClick(id){
+  if(selectedPieceId===id){ setSelected(null); return; }
+  setSelected(id);
+}
+function coordsToIdx(e, container){
+  const r = container.getBoundingClientRect();
+  const x = clamp(e.clientX - r.left, 0, r.width-1);
+  const y = clamp(e.clientY - r.top, 0, r.height-1);
+  const col = Math.floor(x / (r.width/GRID));
+  const row = Math.floor(y / (r.height/GRID));
+  const idx = row*GRID + col;
+  return (idx<0 || idx>=PIECES)? -1 : idx;
+}
+function placeAt(pieceId, type, idx){
+  const p = pieces[pieceId];
+  const fromT = p.slotType, fromI = p.slotIndex;
+  if(fromT==='pool') poolSlots[fromI]=null; else boardSlots[fromI]=null;
+  if(type==='pool'){ poolSlots[idx]=pieceId; poolEl.appendChild(p.el); }
+  else { boardSlots[idx]=pieceId; boardEl.appendChild(p.el); }
+  p.slotType=type; p.slotIndex=idx; animateTo(p);
+}
+function swap(aId,bId){
+  const A = pieces[aId], B = pieces[bId];
+  const aT=A.slotType,aI=A.slotIndex, bT=B.slotType,bI=B.slotIndex;
+  if(aT==='pool') poolSlots[aI]=bId; else boardSlots[aI]=bId;
+  if(bT==='pool') poolSlots[bI]=aId; else boardSlots[bI]=aId;
+  if(aT!==bT){
+    if(aT==='pool'){ boardEl.appendChild(A.el); poolEl.appendChild(B.el); }
+    else { poolEl.appendChild(A.el); boardEl.appendChild(B.el); }
+  }
+  A.slotType=bT; A.slotIndex=bI; B.slotType=aT; B.slotIndex=aI;
+  animateTo(A); animateTo(B);
+}
+function animateTo(p){
+  const c = (p.slotType==='pool')?poolEl:boardEl;
+  const {x,y,w,h} = gridToXY(p.slotIndex,c);
+  p.el.classList.toggle('in-board', p.slotType==='board');
+  p.el.style.width = w+'px'; p.el.style.height = h+'px';
+  requestAnimationFrame(()=>{ p.el.style.transform = `translate(${x}px, ${y}px)`; });
+}
+function onBoardClick(e){
+  if(selectedPieceId===null) return;
+  const idx = coordsToIdx(e, boardEl); if(idx===-1) return;
+  const here = boardSlots[idx];
+  if(here===null) placeAt(selectedPieceId,'board',idx); else swap(selectedPieceId, here);
+  setSelected(null); checkWin();
+}
+function onPoolClick(e){
+  if(selectedPieceId===null) return;
+  const idx = coordsToIdx(e, poolEl); if(idx===-1) return;
+  const here = poolSlots[idx];
+  if(here===null) placeAt(selectedPieceId,'pool',idx); else swap(selectedPieceId, here);
+  setSelected(null);
+}
+
+/* Victoire */
+function checkWin(){
+  for(let i=0;i<PIECES;i++){ const pid = boardSlots[i]; if(pid===null || pid!==i) return false; }
+  winEl.classList.remove('hidden'); return true;
+}
+
+/* UI */
+toggleNumbers.addEventListener('change',(e)=>{
+  const show = e.target.checked;
+  pieces.forEach(p=> p.el.classList.toggle('show-num', show));
+});
+reshuffleBtn.addEventListener('click', ()=>{ populate(); });
+closeWin.addEventListener('click', ()=> winEl.classList.add('hidden'));
+
+/* Init */
+populate();
+
+// Clic “fond” => désélection
+[poolEl,boardEl,document.body].forEach(el=>{
+  el.addEventListener('click',(e)=>{
+    const t=e.target, isPiece=t.classList?.contains('piece')||t.closest?.('.piece');
+    if(!isPiece) setSelected(null);
+  });
+});
+</script>
+</body>
+</html>
