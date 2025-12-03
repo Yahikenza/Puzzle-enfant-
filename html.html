@@ -34,10 +34,14 @@ body{
 }
 
 /* =================== LAYOUT =================== */
-.app{max-width:1200px;margin:0 auto;padding:18px 14px 28px}
+.app{max-width:1200px;margin:0 auto;padding:18px 14px 28px;position:relative}
 .topbar{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:10px}
 .brand{display:flex;align-items:center;gap:10px}
-.brand .logo{font-size:22px}
+.brand-logo{
+  height:32px;
+  width:auto;
+  display:block;
+}
 .brand h1{margin:0;font-size:clamp(18px,2.2vw,24px);font-weight:800;letter-spacing:.2px}
 .controls{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
 button{border:0;border-radius:12px;cursor:pointer;transition:transform .08s ease}
@@ -62,7 +66,8 @@ label.switch input{accent-color:var(--green1)}
 .panel h2{margin:2px 0 10px 2px;font-size:clamp(14px,1.6vw,18px);color:#2e7f5a;font-weight:800}
 
 .grid{
-  position:relative;flex:1;border-radius:12px;border:1px dashed #b7dccf;
+  position:relative;
+  flex:1;border-radius:12px;border:1px dashed #b7dccf;
   background: linear-gradient(180deg,#edf8f3,#e6f4ef);
   overflow:hidden;min-height:220px;
 }
@@ -93,18 +98,62 @@ label.switch input{accent-color:var(--green1)}
   aspect-ratio:3/4;
 }
 
-/* =================== PIECES (clic) =================== */
+/* =================== BARRE STATUT (progrès + temps) =================== */
+.status-bar{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  width:100%;
+  max-width:520px;
+  font-size:14px;
+  color:var(--muted);
+  gap:8px;
+}
+.status-text{
+  white-space:nowrap;
+}
+#timerText{
+  font-weight:700;
+}
+
+/* =================== ZONE RÉFÉRENCE: ACTIONS =================== */
+.ref-actions{
+  display:flex;
+  gap:8px;
+  margin-top:8px;
+  flex-wrap:wrap;
+}
+.ref-actions button{
+  font-size:12px;
+  padding:6px 10px;
+}
+
+/* =================== PIECES (drag and drop) =================== */
 .piece{
-  position:absolute; overflow:hidden; cursor:pointer;
+  position:absolute; 
+  left:0; top:0;
+  overflow:hidden; cursor:grab;
   border-radius:10px;
   transition: transform .2s cubic-bezier(.2,.8,.2,1), box-shadow .15s, filter .15s, border-radius .15s;
   filter: drop-shadow(0 2px 2px rgba(0,0,0,.06)) drop-shadow(0 6px 10px rgba(0,0,0,.08));
   user-select:none;
-  outline:2px solid rgba(0,0,0,0); /* pour l'état sélectionné */
+  outline:2px solid rgba(0,0,0,0);
+  touch-action:none; /* important pour le drag tactile */
 }
-.piece:hover{filter: drop-shadow(0 3px 3px rgba(0,0,0,.08)) drop-shadow(0 10px 16px rgba(0,0,0,.12))}
-.piece.selected{transform:scale(1.06);box-shadow:0 0 0 6px var(--ring);z-index:5}
-.piece__img{position:absolute;inset:0;background-size:500% 500%;background-repeat:no-repeat}
+.piece:hover{
+  filter: drop-shadow(0 3px 3px rgba(0,0,0,.08)) drop-shadow(0 10px 16px rgba(0,0,0,.12));
+}
+.piece.dragging{
+  cursor:grabbing;
+  box-shadow:0 10px 20px rgba(0,0,0,.18);
+  filter: drop-shadow(0 10px 20px rgba(0,0,0,.18));
+}
+.piece__img{
+  position:absolute;
+  inset:0;
+  background-size:500% 500%;
+  background-repeat:no-repeat;
+}
 .piece__num{
   position:absolute;bottom:6px;right:6px;
   font: 800 12px/1.2 ui-monospace,Consolas,monospace;
@@ -121,17 +170,84 @@ label.switch input{accent-color:var(--green1)}
   outline: none;
 }
 
-/* =================== WIN =================== */
-.win{position:fixed;inset:0;background:rgba(0,0,0,.25);display:grid;place-items:center;backdrop-filter:blur(2px)}
-.win.hidden{display:none}
-.win__card{
-  background:#ffffff;border:1px solid #cfead9;color:#1f3e35;border-radius:18px;padding:18px;
-  width:min(440px,92vw);text-align:center;box-shadow:0 10px 30px rgba(0,0,0,.15)
+/* =================== DROP HIGHLIGHT (aide visuelle enfant) =================== */
+.drop-highlight{
+  position:absolute;
+  left:0; top:0;
+  border-radius:10px;
+  border:2px dashed var(--green1);
+  background:rgba(79,180,107,.18);
+  pointer-events:none;
+  opacity:0;
+  transform:translate(-9999px,-9999px);
+  transition: opacity .08s ease, transform .08s ease;
+  z-index:1;
+}
+.drop-highlight--valid{
+  border-color:#4fb46b;
+  background:rgba(79,180,107,.22);
+}
+.drop-highlight--invalid{
+  border-color:#e08a5a;
+  background:rgba(224,138,90,.16);
+}
+
+/* =================== WIN & MODALES =================== */
+.win,
+.modal{
+  position:fixed;inset:0;
+  background:rgba(0,0,0,.25);
+  display:grid;place-items:center;
+  backdrop-filter:blur(2px);
+}
+.win.hidden,
+.modal.hidden{display:none}
+
+.win__card,
+.modal__card{
+  background:#ffffff;
+  border:1px solid #cfead9;
+  color:#1f3e35;
+  border-radius:18px;
+  padding:18px;
+  width:min(520px,92vw);
+  text-align:center;
+  box-shadow:0 10px 30px rgba(0,0,0,.15);
 }
 .win__title{font-weight:900;font-size:20px;margin:6px 0 14px}
 button.primary{
   background:linear-gradient(180deg,var(--green1),#2c8b53);
   color:#fff;font-weight:900;padding:10px 14px;border-radius:12px;border:0
+}
+
+/* Image zoomée de référence */
+#refZoomImage{
+  max-width:100%;
+  height:auto;
+  border-radius:16px;
+}
+
+/* =================== TOAST (messages positifs) =================== */
+.toast{
+  position:fixed;
+  top:16px;
+  left:50%;
+  transform:translateX(-50%) translateY(-20px);
+  background:#ffffff;
+  color:#22513e;
+  border-radius:999px;
+  padding:8px 16px;
+  border:1px solid #bfe4cf;
+  font-size:14px;
+  box-shadow:0 8px 20px rgba(0,0,0,0.12);
+  opacity:0;
+  pointer-events:none;
+  transition:opacity .2s ease, transform .2s ease;
+  z-index:999;
+}
+.toast--show{
+  opacity:1;
+  transform:translateX(-50%) translateY(0);
 }
 
 /* =================== RESPONSIVE =================== */
@@ -144,12 +260,16 @@ button.primary{
 <body>
   <div class="app">
     <header class="topbar">
-      <div class="brand"><span class="logo">🌿</span><h1>GreenPieces</h1></div>
+      <div class="brand">
+        <img src="logo.png" alt="Logo de l'entreprise" class="brand-logo">
+        <h1>GreenPieces</h1>
+      </div>
       <div class="controls">
         <label class="switch">
           <input id="toggleNumbers" type="checkbox" />
           Afficher les numéros (aide)
         </label>
+        <button id="startGame" class="ghost" title="Démarrer le jeu">Démarrer</button>
         <button id="reshuffle" class="ghost" title="Recommencer">Recommencer</button>
       </div>
     </header>
@@ -163,7 +283,14 @@ button.primary{
 
       <!-- Centre : Assemblage (prioritaire & centré) -->
       <div class="panel center-box">
-        <h2>Reconstituer le puzzle</h2>
+        <h2>Reconstituter le puzzle</h2>
+
+        <!-- Barre statut : progression + timer -->
+        <div class="status-bar">
+          <div id="progressText" class="status-text">Pièces bien placées : 0 / 25</div>
+          <div id="timerText" class="status-text">Temps : 10:00</div>
+        </div>
+
         <div class="board-wrap">
           <div id="board" class="grid" aria-label="Zone de reconstruction"></div>
         </div>
@@ -173,6 +300,10 @@ button.primary{
       <div class="panel">
         <h2>Image complète (référence)</h2>
         <div id="reference" class="ref" aria-label="Image de référence"></div>
+        <div class="ref-actions">
+          <button id="zoomRef" class="ghost" type="button">Zoomer</button>
+          <button id="overlayRef" class="ghost" type="button">Voir sur le plateau</button>
+        </div>
       </div>
     </section>
 
@@ -180,186 +311,682 @@ button.primary{
     <div id="win" class="win hidden" role="alert" aria-live="assertive">
       <div class="win__card">
         <p class="win__title">Bravo ! Tu as aidé la planète 🌱</p>
-        <button id="closeWin" class="primary">Continuer</button>
+        <div style="display:flex;justify-content:center;gap:8px;flex-wrap:wrap;">
+          <button id="closeWin" class="primary">Continuer</button>
+          <button id="replayWin" class="ghost">Refaire le puzzle</button>
+        </div>
       </div>
     </div>
+
+    <!-- Modale de zoom de la référence -->
+    <div id="refZoomModal" class="modal hidden" aria-modal="true" role="dialog">
+      <div class="modal__card">
+        <h2 style="margin-top:0;margin-bottom:10px;">Image complète</h2>
+        <img id="refZoomImage" src="image.png" alt="Agrandissement de l'image de référence">
+        <div style="margin-top:12px;">
+          <button id="closeRefZoom" class="primary" type="button">Fermer</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Toast messages positifs -->
+    <div id="toast" class="toast" aria-live="polite"></div>
   </div>
 
 <script>
-/* =================== GreenPieces — CLIC pour placer/échanger =================== */
-const IMAGE_URL = "image.png"; // même dossier
-const GRID = 5, PIECES = GRID*GRID;
+/*
+  GreenPieces
+  Puzzle écologique interactif pour enfants
+  Version avec:
+    - drag & drop
+    - compteur de progression
+    - minuteur 10 minutes (start bouton)
+    - aide visuelle (case correcte après quelques secondes)
+    - zoom & overlay de la référence
+    - messages positifs pendant le jeu
+*/
 
+/* =================== CONSTANTES =================== */
+const IMAGE_URL = "image.png";
+const GRID = 5;
+const PIECES = GRID * GRID;
+
+// Timer 10 minutes
+const GAME_DURATION_MS = 10 * 60 * 1000;
+
+// Aide visuelle (hint)
+const HINTS_ENABLED = true;
+const HINT_DELAY_MS = 3000;
+
+// Paliers pour les messages positifs
+const MILESTONES = [5, 10, 15, 20];
+const MILESTONE_MESSAGES = {
+  5:  "Super départ ! 🌱",
+  10: "Bravo, tu avances bien ! 🌿",
+  15: "Génial, tu protèges la planète ! 💚",
+  20: "Presque fini, continue ! ✨"
+};
+
+/* =================== RÉFÉRENCES DOM =================== */
 const poolEl = document.getElementById('pool');
 const boardEl = document.getElementById('board');
 const refEl = document.getElementById('reference');
 const toggleNumbers = document.getElementById('toggleNumbers');
 const reshuffleBtn = document.getElementById('reshuffle');
+const startBtn = document.getElementById('startGame');
 const winEl = document.getElementById('win');
 const closeWin = document.getElementById('closeWin');
+const replayWinBtn = document.getElementById('replayWin');
+const progressText = document.getElementById('progressText');
+const timerText = document.getElementById('timerText');
 
-let pieces = [];                          // {id,row,col,el,slotType,slotIndex}
+const zoomRefBtn = document.getElementById('zoomRef');
+const overlayRefBtn = document.getElementById('overlayRef');
+const refZoomModal = document.getElementById('refZoomModal');
+const closeRefZoomBtn = document.getElementById('closeRefZoom');
+const toastEl = document.getElementById('toast');
+
+/* Drop highlights pour l’aide visuelle pendant le drag */
+const poolHighlight = createDropHighlight(poolEl);
+const boardHighlight = createDropHighlight(boardEl);
+
+/* =================== ÉTAT DU PUZZLE =================== */
+let pieces = [];
 let poolSlots = Array(PIECES).fill(null);
 let boardSlots = Array(PIECES).fill(null);
-let selectedPieceId = null;
-let ro = null;
+let ro = null; // ResizeObserver
 
-/* Utils */
+/* État du drag actif */
+let dragState = {
+  pieceId: null,
+  pointerId: null,
+  fromType: null,
+  fromIndex: null,
+  offsetX: 0,
+  offsetY: 0,
+  currentDrop: null, // { type: 'pool'|'board', index }
+  hintTimeoutId: null
+};
+
+/* État du jeu / timer */
+let gameStarted = false;
+let timerId = null;
+let timeLeftMs = GAME_DURATION_MS;
+
+/* Messages positifs */
+let milestonesHit = new Set();
+let toastTimeoutId = null;
+
+/* Overlay de référence sur le board */
+let boardOverlayActive = false;
+
+/* =================== OUTILS GÉNÉRAUX =================== */
 const clamp = (v,min,max)=>Math.max(min,Math.min(max,v));
-function shuffle(a){ for(let i=a.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [a[i],a[j]]=[a[j],a[i]] } }
+
+function shuffle(a){
+  for(let i=a.length-1;i>0;i--){
+    const j = Math.floor(Math.random()*(i+1));
+    [a[i],a[j]] = [a[j],a[i]];
+  }
+}
+
+/* Convertit un index de slot en coordonnées dans un container (grid) */
 function gridToXY(idx, container){
   const r = container.getBoundingClientRect();
   const cw = r.width / GRID, ch = r.height / GRID;
-  const row = Math.floor(idx/GRID), col = idx%GRID;
+  const row = Math.floor(idx/GRID);
+  const col = idx % GRID;
   return { x: col*cw, y: row*ch, w:cw, h:ch, row, col };
 }
 
-/* Création / reset */
-function makePiece(id){
-  const row = Math.floor(id/GRID), col = id%GRID;
-  const el = document.createElement('div');
-  el.className = 'piece'; el.setAttribute('data-id',id);
-  el.setAttribute('role','button'); el.setAttribute('aria-label',`Pièce ${id+1}`);
+/* Pour un point (x,y) dans la fenêtre, calcule l’index de case dans un container */
+function pointToIndex(x, y, container){
+  const r = container.getBoundingClientRect();
+  if (x < r.left || x >= r.right || y < r.top || y >= r.bottom) return -1;
+  const relX = clamp(x - r.left, 0, r.width - 1);
+  const relY = clamp(y - r.top, 0, r.height - 1);
+  const col = Math.floor(relX / (r.width / GRID));
+  const row = Math.floor(relY / (r.height / GRID));
+  const idx = row * GRID + col;
+  if (idx < 0 || idx >= PIECES) return -1;
+  return idx;
+}
 
-  const img = document.createElement('div'); img.className = 'piece__img';
+/* Crée un overlay de surbrillance pour les zones de drop */
+function createDropHighlight(container){
+  const el = document.createElement('div');
+  el.className = 'drop-highlight';
+  container.appendChild(el);
+  return el;
+}
+
+/* Cache les surbrillances */
+function hideHighlights(){
+  [poolHighlight, boardHighlight].forEach(h=>{
+    h.style.opacity = '0';
+    h.style.transform = 'translate(-9999px,-9999px)';
+  });
+}
+
+/* =================== CRÉATION DES PIÈCES =================== */
+function makePiece(id){
+  const row = Math.floor(id / GRID);
+  const col = id % GRID;
+
+  const el = document.createElement('div');
+  el.className = 'piece';
+  el.setAttribute('data-id', id);
+  el.setAttribute('role', 'button');
+  el.setAttribute('aria-label', `Pièce ${id+1}`);
+
+  const img = document.createElement('div');
+  img.className = 'piece__img';
   img.style.backgroundImage = `url("${IMAGE_URL}")`;
   img.style.backgroundSize = `${GRID*100}% ${GRID*100}%`;
   img.style.backgroundPosition = `${(col/(GRID-1))*100}% ${(row/(GRID-1))*100}%`;
 
-  const num = document.createElement('div'); num.className = 'piece__num'; num.textContent = id+1;
+  const num = document.createElement('div');
+  num.className = 'piece__num';
+  num.textContent = id + 1;
 
-  el.appendChild(img); el.appendChild(num);
-  el.addEventListener('click', (e)=>{ e.stopPropagation(); onPieceClick(id); });
+  el.appendChild(img);
+  el.appendChild(num);
+
+  // Drag & drop
+  el.addEventListener('pointerdown', onPiecePointerDown);
+
   return { id, row, col, el, slotType:'pool', slotIndex:-1 };
 }
 
+/* Vide les grilles et réinitialise l’état */
 function clearBoards(){
-  poolEl.innerHTML=''; boardEl.innerHTML='';
-  pieces=[]; poolSlots=Array(PIECES).fill(null); boardSlots=Array(PIECES).fill(null);
-  selectedPieceId=null;
+  poolEl.innerHTML = '';
+  boardEl.innerHTML = '';
+  // Réattacher les highlights après reset
+  poolEl.appendChild(poolHighlight);
+  boardEl.appendChild(boardHighlight);
+
+  pieces = [];
+  poolSlots = Array(PIECES).fill(null);
+  boardSlots = Array(PIECES).fill(null);
 }
 
+/* Place visuellement toutes les pièces selon leurs slotType/slotIndex */
 function layoutAll(){
   pieces.forEach(p=>{
-    const c = (p.slotType==='pool')?poolEl:boardEl;
-    const {x,y,w,h} = gridToXY(p.slotIndex,c);
-    // style “sans espace” quand sur board
-    p.el.classList.toggle('in-board', p.slotType==='board');
-    p.el.style.width = w+'px'; p.el.style.height = h+'px';
+    const container = (p.slotType === 'pool') ? poolEl : boardEl;
+    const {x,y,w,h} = gridToXY(p.slotIndex, container);
+    p.el.classList.toggle('in-board', p.slotType === 'board');
+    p.el.style.width  = w + 'px';
+    p.el.style.height = h + 'px';
+    p.el.style.left   = '0px';
+    p.el.style.top    = '0px';
     p.el.style.transform = `translate(${x}px, ${y}px)`;
   });
 }
 
+/* Remplit le puzzle avec les pièces mélangées */
 function populate(){
   clearBoards();
   refEl.style.backgroundImage = `url("${IMAGE_URL}")`;
-  for(let i=0;i<PIECES;i++) pieces.push(makePiece(i));
 
-  const order = [...Array(PIECES).keys()]; shuffle(order);
-  order.forEach((slotIdx,i)=>{
-    const p = pieces[i]; p.slotType='pool'; p.slotIndex=slotIdx;
-    poolSlots[slotIdx]=p.id; poolEl.appendChild(p.el);
+  for(let i=0; i<PIECES; i++){
+    pieces.push(makePiece(i));
+  }
+
+  const order = [...Array(PIECES).keys()];
+  shuffle(order);
+
+  order.forEach((slotIdx, i)=>{
+    const p = pieces[i];
+    p.slotType = 'pool';
+    p.slotIndex = slotIdx;
+    poolSlots[slotIdx] = p.id;
+    poolEl.appendChild(p.el);
   });
-
-  poolEl.addEventListener('click', onPoolClick);
-  boardEl.addEventListener('click', onBoardClick);
 
   layoutAll();
 
   if(ro) ro.disconnect();
-  ro = new ResizeObserver(layoutAll);
-  ro.observe(poolEl); ro.observe(boardEl);
+  ro = new ResizeObserver(() => {
+    layoutAll();
+    hideHighlights();
+  });
+  ro.observe(poolEl);
+  ro.observe(boardEl);
 
-  // montrer les numéros si coché
   const show = toggleNumbers.checked;
-  pieces.forEach(p=> p.el.classList.toggle('show-num', show));
+  pieces.forEach(p => p.el.classList.toggle('show-num', show));
 }
 
-/* Sélection & déplacements (clic) */
-function setSelected(id){
-  if(selectedPieceId!==null) pieces[selectedPieceId].el.classList.remove('selected');
-  selectedPieceId = id;
-  if(id!==null) pieces[id].el.classList.add('selected');
-}
-function onPieceClick(id){
-  if(selectedPieceId===id){ setSelected(null); return; }
-  setSelected(id);
-}
-function coordsToIdx(e, container){
-  const r = container.getBoundingClientRect();
-  const x = clamp(e.clientX - r.left, 0, r.width-1);
-  const y = clamp(e.clientY - r.top, 0, r.height-1);
-  const col = Math.floor(x / (r.width/GRID));
-  const row = Math.floor(y / (r.height/GRID));
-  const idx = row*GRID + col;
-  return (idx<0 || idx>=PIECES)? -1 : idx;
-}
+/* =================== LOGIQUE DE PLACEMENT =================== */
 function placeAt(pieceId, type, idx){
   const p = pieces[pieceId];
-  const fromT = p.slotType, fromI = p.slotIndex;
-  if(fromT==='pool') poolSlots[fromI]=null; else boardSlots[fromI]=null;
-  if(type==='pool'){ poolSlots[idx]=pieceId; poolEl.appendChild(p.el); }
-  else { boardSlots[idx]=pieceId; boardEl.appendChild(p.el); }
-  p.slotType=type; p.slotIndex=idx; animateTo(p);
-}
-function swap(aId,bId){
-  const A = pieces[aId], B = pieces[bId];
-  const aT=A.slotType,aI=A.slotIndex, bT=B.slotType,bI=B.slotIndex;
-  if(aT==='pool') poolSlots[aI]=bId; else boardSlots[aI]=bId;
-  if(bT==='pool') poolSlots[bI]=aId; else boardSlots[bI]=aId;
-  if(aT!==bT){
-    if(aT==='pool'){ boardEl.appendChild(A.el); poolEl.appendChild(B.el); }
-    else { poolEl.appendChild(A.el); boardEl.appendChild(B.el); }
+  const fromType = p.slotType;
+  const fromIndex = p.slotIndex;
+
+  if (fromType === 'pool') {
+    poolSlots[fromIndex] = null;
+  } else {
+    boardSlots[fromIndex] = null;
   }
-  A.slotType=bT; A.slotIndex=bI; B.slotType=aT; B.slotIndex=aI;
-  animateTo(A); animateTo(B);
+
+  if (type === 'pool') {
+    poolSlots[idx] = pieceId;
+    poolEl.appendChild(p.el);
+  } else {
+    boardSlots[idx] = pieceId;
+    boardEl.appendChild(p.el);
+  }
+
+  p.slotType = type;
+  p.slotIndex = idx;
+  animateTo(p);
 }
+
+function swap(aId, bId){
+  const A = pieces[aId];
+  const B = pieces[bId];
+
+  const aType = A.slotType;
+  const aIndex = A.slotIndex;
+  const bType = B.slotType;
+  const bIndex = B.slotIndex;
+
+  if (aType === 'pool') poolSlots[aIndex] = bId; else boardSlots[aIndex] = bId;
+  if (bType === 'pool') poolSlots[bIndex] = aId; else boardSlots[bIndex] = aId;
+
+  if (aType !== bType){
+    if (aType === 'pool'){
+      boardEl.appendChild(A.el);
+      poolEl.appendChild(B.el);
+    } else {
+      poolEl.appendChild(A.el);
+      boardEl.appendChild(B.el);
+    }
+  }
+
+  A.slotType = bType;
+  A.slotIndex = bIndex;
+  B.slotType = aType;
+  B.slotIndex = aIndex;
+
+  animateTo(A);
+  animateTo(B);
+}
+
+/* Anime une pièce jusqu’à son slot (snap visuel) */
 function animateTo(p){
-  const c = (p.slotType==='pool')?poolEl:boardEl;
-  const {x,y,w,h} = gridToXY(p.slotIndex,c);
-  p.el.classList.toggle('in-board', p.slotType==='board');
-  p.el.style.width = w+'px'; p.el.style.height = h+'px';
-  requestAnimationFrame(()=>{ p.el.style.transform = `translate(${x}px, ${y}px)`; });
-}
-function onBoardClick(e){
-  if(selectedPieceId===null) return;
-  const idx = coordsToIdx(e, boardEl); if(idx===-1) return;
-  const here = boardSlots[idx];
-  if(here===null) placeAt(selectedPieceId,'board',idx); else swap(selectedPieceId, here);
-  setSelected(null); checkWin();
-}
-function onPoolClick(e){
-  if(selectedPieceId===null) return;
-  const idx = coordsToIdx(e, poolEl); if(idx===-1) return;
-  const here = poolSlots[idx];
-  if(here===null) placeAt(selectedPieceId,'pool',idx); else swap(selectedPieceId, here);
-  setSelected(null);
+  const container = (p.slotType === 'pool') ? poolEl : boardEl;
+  const {x,y,w,h} = gridToXY(p.slotIndex, container);
+
+  p.el.classList.toggle('in-board', p.slotType === 'board');
+  p.el.style.width  = w + 'px';
+  p.el.style.height = h + 'px';
+  p.el.style.left   = '0px';
+  p.el.style.top    = '0px';
+
+  requestAnimationFrame(()=>{
+    p.el.style.transform = `translate(${x}px, ${y}px)`;
+  });
 }
 
-/* Victoire */
+/* =================== PROGRESSION & VICTOIRE =================== */
+function countCorrect(){
+  let correct = 0;
+  for(let i=0; i<PIECES; i++){
+    if (boardSlots[i] === i) correct++;
+  }
+  return correct;
+}
+
+/* Met à jour le texte "Pièces bien placées : X / Y" + messages positifs */
+function updateProgress(){
+  const correct = countCorrect();
+  progressText.textContent = `Pièces bien placées : ${correct} / ${PIECES}`;
+
+  if (MILESTONES.includes(correct) && !milestonesHit.has(correct)){
+    milestonesHit.add(correct);
+    const msg = MILESTONE_MESSAGES[correct] || "Bien joué !";
+    showToast(msg);
+  }
+}
+
+/* Vérifie si toutes les pièces sont correctement placées */
 function checkWin(){
-  for(let i=0;i<PIECES;i++){ const pid = boardSlots[i]; if(pid===null || pid!==i) return false; }
-  winEl.classList.remove('hidden'); return true;
+  for(let i=0; i<PIECES; i++){
+    const pid = boardSlots[i];
+    if (pid === null || pid !== i) return false;
+  }
+  winEl.classList.remove('hidden');
+  stopTimer();
+  gameStarted = false;
+  showToast("Puzzle terminé, bravo ! 🌍");
+  return true;
 }
 
-/* UI */
+/* =================== TIMER =================== */
+function formatTime(ms){
+  const totalSec = Math.floor(ms / 1000);
+  const min = Math.floor(totalSec / 60);
+  const sec = totalSec % 60;
+  return `${String(min).padStart(2,'0')}:${String(sec).padStart(2,'0')}`;
+}
+
+function resetTimerUI(){
+  timeLeftMs = GAME_DURATION_MS;
+  timerText.textContent = `Temps : ${formatTime(timeLeftMs)}`;
+}
+
+function updateTimerUI(){
+  timerText.textContent = `Temps : ${formatTime(timeLeftMs)}`;
+}
+
+function stopTimer(){
+  if (timerId !== null){
+    clearInterval(timerId);
+    timerId = null;
+  }
+}
+
+function startTimer(){
+  stopTimer();
+  const startTime = Date.now();
+  const endTime = startTime + GAME_DURATION_MS;
+
+  timerId = setInterval(()=>{
+    const now = Date.now();
+    timeLeftMs = Math.max(0, endTime - now);
+    updateTimerUI();
+    if (timeLeftMs <= 0){
+      stopTimer();
+      gameStarted = false;
+      timerText.textContent = 'Temps écoulé';
+      showToast("Le temps est terminé, tu peux réessayer !");
+    }
+  }, 500);
+}
+
+/* Bouton "Démarrer" : lance le jeu et le timer */
+function startGame(){
+  if (gameStarted) return;
+  gameStarted = true;
+  timeLeftMs = GAME_DURATION_MS;
+  resetTimerUI();
+  startTimer();
+}
+
+/* =================== TOAST (messages positifs) =================== */
+function showToast(message){
+  if (!toastEl) return;
+  toastEl.textContent = message;
+  toastEl.classList.add('toast--show');
+  if (toastTimeoutId !== null){
+    clearTimeout(toastTimeoutId);
+  }
+  toastTimeoutId = setTimeout(()=>{
+    toastEl.classList.remove('toast--show');
+  }, 2000);
+}
+
+/* =================== OVERLAY DE RÉFÉRENCE SUR LE BOARD =================== */
+function updateBoardOverlay(){
+  if (boardOverlayActive){
+    boardEl.style.backgroundImage =
+      `linear-gradient(rgba(234,246,240,0.65), rgba(234,246,240,0.65)), url("${IMAGE_URL}")`;
+    boardEl.style.backgroundSize = "contain";   // <-- au lieu de "cover"
+    boardEl.style.backgroundPosition = "center";
+    boardEl.style.backgroundRepeat = "no-repeat";
+  } else {
+    boardEl.style.backgroundImage = "";
+    boardEl.style.backgroundSize = "";
+    boardEl.style.backgroundPosition = "";
+    boardEl.style.backgroundRepeat = "";
+  }
+}
+
+/* =================== DRAG AND DROP =================== */
+function onPiecePointerDown(e){
+  // Jeu non démarré => on ignore
+  if (!gameStarted) return;
+
+  if (e.pointerType === 'mouse' && e.button !== 0) return;
+  e.preventDefault();
+
+  const el = e.currentTarget;
+  const id = parseInt(el.getAttribute('data-id'), 10);
+  const p = pieces[id];
+
+  dragState.pieceId = id;
+  dragState.pointerId = e.pointerId;
+  dragState.fromType = p.slotType;
+  dragState.fromIndex = p.slotIndex;
+
+  const rect = p.el.getBoundingClientRect();
+  dragState.offsetX = e.clientX - rect.left;
+  dragState.offsetY = e.clientY - rect.top;
+  dragState.currentDrop = null;
+
+  // Hint retardé (case correcte) si activé
+  if (HINTS_ENABLED){
+    dragState.hintTimeoutId = setTimeout(()=>{
+      showHintForPiece(id);
+    }, HINT_DELAY_MS);
+  }
+
+  p.el.classList.add('dragging');
+  p.el.style.transition = 'none';
+  p.el.style.pointerEvents = 'none';
+  p.el.style.width  = rect.width + 'px';
+  p.el.style.height = rect.height + 'px';
+  p.el.style.left   = rect.left + 'px';
+  p.el.style.top    = rect.top + 'px';
+  p.el.style.transform = 'translate(0px, 0px)';
+
+  // Mettre la pièce dans le body pour éviter les clips
+  document.body.appendChild(p.el);
+
+  try {
+    p.el.setPointerCapture(e.pointerId);
+  } catch(_) {}
+
+  window.addEventListener('pointermove', onGlobalPointerMove);
+  window.addEventListener('pointerup', onGlobalPointerUp);
+  window.addEventListener('pointercancel', onGlobalPointerUp);
+}
+
+function onGlobalPointerMove(e){
+  if (dragState.pieceId === null || e.pointerId !== dragState.pointerId) return;
+  e.preventDefault();
+
+  const p = pieces[dragState.pieceId];
+  const x = e.clientX - dragState.offsetX;
+  const y = e.clientY - dragState.offsetY;
+
+  p.el.style.left = x + 'px';
+  p.el.style.top  = y + 'px';
+
+  updateDropTarget(e.clientX, e.clientY);
+}
+
+function onGlobalPointerUp(e){
+  if (dragState.pieceId === null || e.pointerId !== dragState.pointerId) return;
+  finishDrag();
+}
+
+/* Mise à jour de la zone de drop courante + highlight */
+function updateDropTarget(clientX, clientY){
+  let target = null;
+
+  const boardIndex = pointToIndex(clientX, clientY, boardEl);
+  if (boardIndex !== -1){
+    target = { type:'board', index:boardIndex };
+  } else {
+    const poolIndex = pointToIndex(clientX, clientY, poolEl);
+    if (poolIndex !== -1){
+      target = { type:'pool', index:poolIndex };
+    }
+  }
+
+  dragState.currentDrop = target;
+
+  hideHighlights();
+  if (!target) return;
+
+  const container = (target.type === 'board') ? boardEl : poolEl;
+  const highlight = (target.type === 'board') ? boardHighlight : poolHighlight;
+  const {x,y,w,h} = gridToXY(target.index, container);
+
+  const pieceId = dragState.pieceId;
+  const isCorrectSpot = (target.type === 'board' && target.index === pieceId);
+
+  highlight.classList.toggle('drop-highlight--valid', !!isCorrectSpot);
+  highlight.classList.toggle('drop-highlight--invalid', target.type === 'board' && !isCorrectSpot);
+
+  highlight.style.width  = w + 'px';
+  highlight.style.height = h + 'px';
+  highlight.style.transform = `translate(${x}px, ${y}px)`;
+  highlight.style.opacity = '1';
+}
+
+/* Aide visuelle: montre la case correcte sur le board */
+function showHintForPiece(pieceId){
+  if (!HINTS_ENABLED) return;
+  if (dragState.pieceId !== pieceId) return;
+  if (!gameStarted) return;
+
+  const correctIndex = pieceId;
+  if (boardSlots[correctIndex] === pieceId) return; // déjà bien placée
+
+  const {x,y,w,h} = gridToXY(correctIndex, boardEl);
+  const highlight = boardHighlight;
+
+  highlight.classList.add('drop-highlight--valid');
+  highlight.classList.remove('drop-highlight--invalid');
+  highlight.style.width  = w + 'px';
+  highlight.style.height = h + 'px';
+  highlight.style.transform = `translate(${x}px, ${y}px)`;
+  highlight.style.opacity = '1';
+}
+
+/* Nettoie le timeout d'aide */
+function clearHintTimeout(){
+  if (dragState.hintTimeoutId !== null){
+    clearTimeout(dragState.hintTimeoutId);
+    dragState.hintTimeoutId = null;
+  }
+}
+
+/* Applique le drop ou remet la pièce à sa place d’origine */
+function finishDrag(){
+  const id = dragState.pieceId;
+  const p = pieces[id];
+
+  window.removeEventListener('pointermove', onGlobalPointerMove);
+  window.removeEventListener('pointerup', onGlobalPointerUp);
+  window.removeEventListener('pointercancel', onGlobalPointerUp);
+
+  hideHighlights();
+  clearHintTimeout();
+
+  p.el.classList.remove('dragging');
+  p.el.style.pointerEvents = '';
+  p.el.style.transition = '';
+
+  const target = dragState.currentDrop;
+
+  if (!target){
+    // Pas de drop valide: retour
+    const originContainer = (dragState.fromType === 'board') ? boardEl : poolEl;
+    originContainer.appendChild(p.el);
+    p.slotType = dragState.fromType;
+    p.slotIndex = dragState.fromIndex;
+    animateTo(p);
+  } else {
+    const slots = (target.type === 'board') ? boardSlots : poolSlots;
+    const here = slots[target.index];
+
+    if (here === null){
+      placeAt(id, target.type, target.index);
+    } else if (here !== id){
+      swap(id, here);
+    } else {
+      const originContainer = (p.slotType === 'board') ? boardEl : poolEl;
+      originContainer.appendChild(p.el);
+      animateTo(p);
+    }
+
+    updateProgress();
+    if (target.type === 'board'){
+      checkWin();
+    }
+  }
+
+  dragState = {
+    pieceId: null,
+    pointerId: null,
+    fromType: null,
+    fromIndex: null,
+    offsetX: 0,
+    offsetY: 0,
+    currentDrop: null,
+    hintTimeoutId: null
+  };
+}
+
+/* =================== UI (NUMÉROS, BOUTONS, MODALES) =================== */
 toggleNumbers.addEventListener('change',(e)=>{
   const show = e.target.checked;
   pieces.forEach(p=> p.el.classList.toggle('show-num', show));
 });
-reshuffleBtn.addEventListener('click', ()=>{ populate(); });
-closeWin.addEventListener('click', ()=> winEl.classList.add('hidden'));
 
-/* Init */
-populate();
+/* Recommencer totalement le puzzle + timer reset */
+function restartGame(){
+  stopTimer();
+  gameStarted = false;
+  populate();
+  resetTimerUI();
+  milestonesHit.clear();
+  updateProgress();
+}
 
-// Clic “fond” => désélection
-[poolEl,boardEl,document.body].forEach(el=>{
-  el.addEventListener('click',(e)=>{
-    const t=e.target, isPiece=t.classList?.contains('piece')||t.closest?.('.piece');
-    if(!isPiece) setSelected(null);
-  });
+reshuffleBtn.addEventListener('click', ()=>{
+  restartGame();
 });
+
+startBtn.addEventListener('click', ()=>{
+  startGame();
+});
+
+closeWin.addEventListener('click', ()=>{
+  winEl.classList.add('hidden');
+});
+
+replayWinBtn.addEventListener('click', ()=>{
+  winEl.classList.add('hidden');
+  restartGame();
+});
+
+/* Zoom référence */
+zoomRefBtn.addEventListener('click', ()=>{
+  refZoomModal.classList.remove('hidden');
+});
+closeRefZoomBtn.addEventListener('click', ()=>{
+  refZoomModal.classList.add('hidden');
+});
+
+/* Overlay référence sur board */
+overlayRefBtn.addEventListener('click', ()=>{
+  boardOverlayActive = !boardOverlayActive;
+  updateBoardOverlay();
+  overlayRefBtn.textContent = boardOverlayActive ? "Masquer du plateau" : "Voir sur le plateau";
+});
+
+/* =================== INIT =================== */
+populate();
+resetTimerUI();
+updateProgress();
+updateBoardOverlay();
 </script>
 </body>
 </html>
